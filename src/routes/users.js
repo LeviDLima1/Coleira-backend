@@ -14,4 +14,8 @@ router.post('/users', validateUser, UserController.createUser);
 router.put('/users/:id', authMiddleware, UserController.updateUser);
 router.delete('/users/:id', authMiddleware, UserController.deleteUser);
 
+// Novas rotas para perfil
+router.get('/users/profile', authMiddleware, UserController.getProfile);
+router.put('/users/profile', authMiddleware, UserController.updateProfile);
+
 module.exports = router;

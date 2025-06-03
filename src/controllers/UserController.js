@@ -124,17 +124,74 @@ const UserController = {
                 { expiresIn: '1d' }
             );
 
+            // Retorna os dados do usuário sem a senha
+            const userData = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                photo: user.photo || null
+            };
+
             return res.status(200).json({
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email
-                },
+                user: userData,
                 token
             });
         } catch (error) {
             console.error('Erro no login:', error);
             return res.status(500).json({ error: 'Erro ao fazer login' });
+        }
+    },
+    getProfile: async (req, res) => {
+        try {
+            const userId = req.userId;
+            const user = await User.findByPk(userId, {
+                attributes: { exclude: ['password'] }
+            });
+
+            if (!user) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
+
+            return res.status(200).json(user);
+        } catch (error) {
+            console.error('Erro ao buscar perfil:', error);
+            return res.status(500).json({ error: 'Erro ao buscar perfil do usuário' });
+        }
+    },
+    updateProfile: async (req, res) => {
+        try {
+            const userId = req.userId;
+            const data = req.body;
+            console.log('Atualizando perfil do usuário:', { userId, data });
+
+            // Se houver senha, criptografa
+            if (data.password) {
+                data.password = await bcrypt.hash(data.password, 10);
+            }
+
+            const user = await User.findByPk(userId);
+            console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
+
+            if (!user) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
+
+            // Atualiza os dados
+            await user.update(data);
+            console.log('Dados atualizados com sucesso');
+
+            // Busca o usuário atualizado (sem a senha)
+            const updatedUser = await User.findByPk(userId, {
+                attributes: { exclude: ['password'] }
+            });
+
+            return res.status(200).json({
+                message: 'Perfil atualizado com sucesso',
+                user: updatedUser
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar perfil:', error);
+            return res.status(500).json({ error: 'Erro ao atualizar perfil do usuário' });
         }
     }
 };

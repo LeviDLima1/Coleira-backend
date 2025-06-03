@@ -20,6 +20,52 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    cpf: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true
+    },
+    dataNascimento: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    telefone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true
+    },
+    cep: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    rua: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    numero: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    complemento: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    bairro: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    cidade: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    estado: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    foto: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW

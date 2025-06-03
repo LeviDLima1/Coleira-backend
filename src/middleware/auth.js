@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const authMiddleware = (req, res, next) => {
     // Pega o token do header Authorization
     const authHeader = req.headers.authorization;
+    console.log('Auth Header:', authHeader);
 
     if (!authHeader) {
         return res.status(401).json({ error: 'Token não fornecido' });
@@ -24,12 +25,15 @@ const authMiddleware = (req, res, next) => {
     try {
         // Verifica se o token é válido
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Token decodificado:', decoded);
 
         // Adiciona o ID do usuário na requisição
         req.userId = decoded.id;
+        console.log('ID do usuário:', req.userId);
 
         return next();
     } catch (err) {
+        console.error('Erro ao verificar token:', err);
         return res.status(401).json({ error: 'Token inválido' });
     }
 };
