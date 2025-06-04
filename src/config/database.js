@@ -9,8 +9,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST || '192.168.18.31',
     dialect: 'mysql',
-    // Configurações adicionais
-    logging: false, // Desativa logs SQL
+    logging: console.log, // Ativa logs SQL para debug
   }
 );
 
@@ -18,9 +17,9 @@ const sequelize = new Sequelize(
 async function testConnection() {
   try {
     await sequelize.authenticate();
-    console.log('Conexão com o banco estabelecida com sucesso.');
+    console.log('✅ Conexão com o banco estabelecida com sucesso.');
   } catch (error) {
-    console.error('Não foi possível conectar ao banco:', error);
+    console.error('❌ Não foi possível conectar ao banco:', error);
   }
 }
 
@@ -41,24 +40,25 @@ async function createDatabase() {
 
     // Cria o banco de dados se não existir
     await tempSequelize.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'coleirainteligente'};`);
-    console.log('Banco de dados criado ou já existente');
+    console.log('✅ Banco de dados criado ou já existente');
 
     // Fecha a conexão temporária
     await tempSequelize.close();
   } catch (error) {
-    console.error('Erro ao criar banco de dados:', error);
+    console.error('❌ Erro ao criar banco de dados:', error);
   }
 }
 
 // Primeiro cria o banco, depois sincroniza
 async function initializeDatabase() {
   await createDatabase();
+  // Sincroniza as tabelas sem forçar a recriação
   await sequelize.sync();
-  console.log('Banco de dados sincronizado');
+  console.log('✅ Banco de dados sincronizado');
 }
 
 initializeDatabase().catch(error => {
-  console.error('Erro ao inicializar banco de dados:', error);
+  console.error('❌ Erro ao inicializar banco de dados:', error);
 });
 
 // Exportando a conexão e a função de teste

@@ -8,14 +8,14 @@ const authMiddleware = require('../middleware/auth');
 router.post('/login', UserController.login);
 
 // Rotas protegidas
-router.get('/users', authMiddleware, UserController.listUsers);
-router.get('/users/:id', authMiddleware, UserController.listUserById);
-router.post('/users', validateUser, UserController.createUser);
-router.put('/users/:id', authMiddleware, UserController.updateUser);
-router.delete('/users/:id', authMiddleware, UserController.deleteUser);
+router.get('/', authMiddleware, UserController.listUsers);
+router.get('/:id', authMiddleware, UserController.listUserById);
+router.post('/', validateUser, UserController.createUser);
+router.put('/:id', authMiddleware, UserController.updateUser);
+router.delete('/:id', authMiddleware, UserController.deleteUser);
 
 // Novas rotas para perfil
-router.get('/users/profile', authMiddleware, UserController.getProfile);
-router.put('/users/profile', authMiddleware, UserController.updateProfile);
+router.get('/profile', authMiddleware, UserController.getProfile);
+router.put('/profile', authMiddleware, UserController.updateProfile);
 
 module.exports = router;
