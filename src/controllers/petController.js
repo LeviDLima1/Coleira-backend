@@ -268,11 +268,20 @@ exports.getPetLocation = async (req, res) => {
                 data: responseData
             });
         } else {
-            console.log(`No location found for pet ${petId}`);
-            res.status(404).json({
-                success: false,
-                error: 'Localização do pet não encontrada'
+            console.log(`No location found for pet ${petId}. Returning mock data.`);
+            // --- Retornar dados mock para desenvolvimento ---
+            const mockResponseData = {
+                latitude: -23.5505, // Exemplo: Coordenadas de São Paulo
+                longitude: -46.6333,
+                timestamp: new Date().toISOString(),
+                batteryLevel: 85,
+                status: 'Mock Data - Online',
+            };
+            res.status(200).json({
+                success: true,
+                data: mockResponseData
             });
+            // --------------------------------------------------
         }
 
     } catch (error) {
