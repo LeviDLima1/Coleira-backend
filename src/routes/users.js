@@ -4,9 +4,6 @@ const UserController = require('../controllers/UserController');
 const { validateUser } = require('../middleware/validation');
 const authMiddleware = require('../middleware/auth');
 
-// Rota pública
-router.post('/login', UserController.login);
-
 // Rotas protegidas
 router.get('/', authMiddleware, UserController.listUsers);
 router.get('/:id', authMiddleware, UserController.listUserById);

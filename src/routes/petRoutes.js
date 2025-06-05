@@ -12,10 +12,16 @@ router.post('/', petController.createPet);
 // Obter todos os pets do usuário
 router.get('/', petController.getUserPets);
 
+// Obter um pet específico por ID
+router.get('/:id', petController.getPetById);
+
 // Atualizar um pet específico
 router.put('/:id', petController.updatePet);
 
 // Deletar um pet específico
 router.delete('/:id', petController.deletePet);
+
+// Obter localização do pet por ID (corrigido para usar petId)
+router.get('/location/:petId', petController.getPetLocation);
 
 module.exports = router; 
