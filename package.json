@@ -7,18 +7,24 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
+    "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
+    "expo": "^53.0.10",
+    "expo-notifications": "^0.31.3",
+    "expo-server-sdk": "^3.15.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "metro-core": "^0.82.4",
     "mysql2": "^3.14.1",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
+    "@react-native-community/cli": "^18.0.0",
     "nodemon": "^3.1.10"
   }
 }

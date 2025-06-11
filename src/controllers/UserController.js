@@ -36,7 +36,7 @@ const UserController = {
             const data = {
                 name: req.body.name,
                 email: req.body.email,
-                password: await bcrypt.hash(req.body.password, 10) // Criptografando a senha
+                password: req.body.password // NÃO hash aqui, o model já faz isso
             };
 
             // Verifica se já existe um usuário com este email
@@ -193,6 +193,29 @@ const UserController = {
         } catch (error) {
             console.error('Erro ao atualizar perfil:', error);
             return res.status(500).json({ error: 'Erro ao atualizar perfil do usuário' });
+        }
+    },
+    updatePushToken: async (req, res) => {
+        try {
+            const { pushToken } = req.body;
+            const userId = req.user.id; // Assumindo que o middleware de autenticação já definiu req.user
+
+            if (!pushToken) {
+                return res.status(400).json({ error: 'Token de notificação não fornecido' });
+            }
+
+            const user = await User.findByPk(userId);
+            if (!user) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
+
+            user.pushToken = pushToken;
+            await user.save();
+
+            res.json({ message: 'Token de notificação atualizado com sucesso' });
+        } catch (error) {
+            console.error('Erro ao atualizar token de notificação:', error);
+            res.status(500).json({ error: 'Erro ao atualizar token de notificação' });
         }
     }
 };

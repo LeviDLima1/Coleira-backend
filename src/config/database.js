@@ -6,7 +6,7 @@ module.exports = {
     username: process.env.DB_USER || 'root',
     password: process.env.DB_PASS || 'root',
     database: process.env.DB_NAME || 'coleirainteligente',
-    host: process.env.DB_HOST || '192.168.18.31',
+    host: process.env.DB_HOST || '192.168.1.2',
     dialect: 'mysql',
     logging: console.log, // Ativa logs SQL para debug
   },

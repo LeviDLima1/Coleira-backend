@@ -1,9 +1,10 @@
 const db = require('../models');
 const Location = db.Location;
-const Pet = db.Pet; // Importar modelo Pet
-const User = db.User; // Importar modelo User
-const SafeZone = db.SafeZone; // Importar modelo SafeZone
-const Alert = db.Alert; // Importar modelo Alert
+const Pet = db.Pet;
+const User = db.User;
+const SafeZone = db.SafeZone;
+const Alert = db.Alert;
+const { sendSafeZoneAlertNotification } = require('../services/notificationService');
 
 // Função auxiliar para calcular a distância entre dois pontos geográficos (fórmula de Haversine)
 function haversineDistance(lat1, lon1, lat2, lon2) {
@@ -28,109 +29,131 @@ function isInsideSafeZone(pointLat, pointLon, zoneLat, zoneLon, zoneRadius) {
     return distance <= zoneRadius;
 }
 
-exports.receiveLocationData = async (req, res) => {
+// Função para verificar se um ponto está dentro de uma zona segura
+function isPointInSafeZone(point, safeZone) {
+    const distance = haversineDistance(
+        point.latitude,
+        point.longitude,
+        safeZone.center_latitude,
+        safeZone.center_longitude
+    );
+    return distance <= safeZone.radius;
+}
+
+// Função para receber dados de localização do ESP32
+async function receiveLocationData(req, res) {
     try {
         console.log('📦 Dados de localização recebidos:', req.body);
+        console.log('🔑 Headers:', req.headers);
+        console.log('🔑 Headers (lowercase):', Object.keys(req.headers).reduce((acc, key) => {
+            acc[key.toLowerCase()] = req.headers[key];
+            return acc;
+        }, {}));
 
-        // Assumindo que o corpo da requisição contém:
-        // { petId: number, latitude: number, longitude: number, batteryLevel?: number, status?: string }
-        const { petId, latitude, longitude, batteryLevel, status } = req.body;
+        const { latitude, longitude } = req.body;
+        const deviceId = req.headers['x-device-id'];
 
-        // TODO: Adicionar validação dos dados recebidos mais robusta
-        if (!petId || latitude === undefined || longitude === undefined) {
+        if (!deviceId) {
+            console.log('❌ Device ID não fornecido');
             return res.status(400).json({
                 success: false,
-                error: 'Dados de localização incompletos.'
+                error: 'Device ID não fornecido no cabeçalho X-Device-ID'
             });
         }
 
-        // Salvar os dados na tabela locations
-        const newLocation = await Location.create({
-            pet_id: petId, // Usar pet_id para corresponder ao nome da coluna no DB
-            latitude: latitude,
-            longitude: longitude,
-            timestamp: new Date(), // Usar a data/hora atual do servidor ao receber
-            battery_level: batteryLevel,
-            status: status,
-        });
+        console.log('🔍 Procurando pet com device_id:', deviceId);
+        console.log('🔍 Device ID type:', typeof deviceId);
+        console.log('🔍 Device ID length:', deviceId.length);
 
-        console.log('✅ Localização salva no DB:', newLocation);
-
-        // --- Lógica de verificação de Zona Segura e Criação de Alerta ---
-        let petStatus = 'Localizado'; // Status padrão se não houver zonas ou verificação
-
-        try {
-            // 1. Encontrar o pet para obter o user_id
-            const pet = await Pet.findByPk(petId);
-
-            if (pet) {
-                // 2. Buscar zonas seguras do usuário dono do pet
-                const safeZones = await SafeZone.findAll({
-                    where: { user_id: pet.userId },
-                });
-
-                console.log(`🔍 Encontradas ${safeZones.length} zonas seguras para o usuário ${pet.userId}.`);
-
-                if (safeZones.length > 0) {
-                    let insideAnyZone = false;
-                    for (const zone of safeZones) {
-                        if (isInsideSafeZone(latitude, longitude, zone.center_latitude, zone.center_longitude, zone.radius)) {
-                            insideAnyZone = true;
-                            console.log(`✅ Pet ${petId} está DENTRO da zona segura: ${zone.name || zone.id}`);
-                            petStatus = 'Dentro da Zona Segura';
-                            // Se estiver dentro de QUALQUER zona, consideramos seguro
-                            break; // Sai do loop assim que encontrar uma zona
-                        }
-                    }
-
-                    if (!insideAnyZone) {
-                        console.log(`❌ Pet ${petId} está FORA de TODAS as zonas seguras.`);
-                        petStatus = 'Fora da Zona Segura';
-
-                        // TODO: Melhorar a lógica para evitar alertas duplicados frequentes (ex: verificar se um alerta recente já existe para saída da zona)
-
-                        // Criar registro de alerta no banco de dados
-                        try {
-                            await Alert.create({
-                                pet_id: petId,
-                                type: 'Saída da Zona Segura',
-                                message: `O pet ${pet.name || pet.id} saiu da zona segura.`,
-                                latitude: latitude,
-                                longitude: longitude,
-                                timestamp: new Date(),
-                                is_resolved: false,
-                            });
-                            console.log('🚨 Alerta de saída da zona segura criado para o pet:', petId);
-                        } catch (alertError) {
-                            console.error('❌ Erro ao criar alerta:', alertError);
-                            // Não re-lançar para não falhar o salvamento da localização
-                        }
-                    }
-                } else {
-                    console.log(`ℹ️ Nenhuma zona segura definida para o usuário ${pet.userId}.`);
-                    petStatus = 'Sem Zona Segura Definida';
-                }
-            } else {
-                console.log(`⚠️ Pet com ID ${petId} não encontrado para verificar zonas seguras.`);
-                petStatus = 'Pet Não Encontrado';
-            }
-        } catch (zoneError) {
-            console.error('❌ Erro geral na lógica de zona segura:', zoneError);
-            petStatus = `Erro ao verificar Zona Segura`;
+        // Encontrar o pet associado ao device_id
+        const pet = await Pet.findOne({ where: { device_id: deviceId } });
+        if (!pet) {
+            console.log('❌ Pet não encontrado para device_id:', deviceId);
+            // Listar todos os pets para debug
+            const allPets = await Pet.findAll();
+            console.log('📋 Todos os pets:', allPets.map(p => ({ id: p.id, device_id: p.device_id })));
+            return res.status(404).json({
+                success: false,
+                error: 'Pet não encontrado para o device_id fornecido'
+            });
         }
 
-        // Opcional: Atualizar o status da localização recém-criada com o resultado da verificação
-        // await newLocation.update({ status: petStatus });
-        // Considere se você quer guardar o status da zona para CADA ponto de localização ou apenas ter um status GERAL do pet.
-        // Para um status geral, você pode atualizar o modelo Pet ou ter um cache.
-        // Por enquanto, vamos apenas logar e criar o alerta, e o frontend buscará o status ao obter a última localização/detalhes do pet.
+        console.log('✅ Pet encontrado:', pet.name);
+
+        // Salvar a localização
+        const location = await Location.create({
+            pet_id: pet.id,
+            latitude,
+            longitude,
+            timestamp: new Date(),
+        });
+
+        console.log('✅ Localização salva no DB:', location.id);
+
+        // Buscar zonas seguras do usuário
+        const safeZones = await SafeZone.findAll({
+            where: { user_id: pet.user_id },
+        });
+
+        console.log(`🔍 Encontradas ${safeZones.length} zonas seguras para o usuário ${pet.user_id}.`);
+
+        // Verificar se o pet está dentro de alguma zona segura
+        let isInSafeZone = false;
+        for (const safeZone of safeZones) {
+            if (isPointInSafeZone({ latitude, longitude }, safeZone)) {
+                isInSafeZone = true;
+                console.log(`✅ Pet ${pet.name} está DENTRO da zona segura: ${safeZone.name || safeZone.id}`);
+                break;
+            }
+        }
+
+        // Se o pet não estiver em nenhuma zona segura, criar um alerta
+        if (!isInSafeZone) {
+            console.log(`❌ Pet ${pet.name} está FORA de TODAS as zonas seguras.`);
+            // Verificar se já existe um alerta recente (últimos 5 minutos)
+            const recentAlert = await Alert.findOne({
+                where: {
+                    pet_id: pet.id,
+                    type: 'safe_zone',
+                    is_resolved: false,
+                    timestamp: {
+                        [db.Sequelize.Op.gte]: new Date(Date.now() - 5 * 60 * 1000), // 5 minutos atrás
+                    },
+                },
+            });
+
+            if (!recentAlert) {
+                // Criar novo alerta
+                const alert = await Alert.create({
+                    pet_id: pet.id,
+                    type: 'safe_zone',
+                    message: `${pet.name} saiu da zona segura!`,
+                    latitude,
+                    longitude,
+                    timestamp: new Date(),
+                    is_resolved: false,
+                });
+
+                // Buscar o usuário para obter o token de notificação
+                const user = await User.findByPk(pet.user_id);
+                if (user && user.pushToken) {
+                    // Enviar notificação push
+                    await sendSafeZoneAlertNotification(
+                        user.pushToken,
+                        pet.name,
+                        latitude,
+                        longitude
+                    );
+                }
+            }
+        }
 
         res.status(201).json({
             success: true,
             message: 'Dados de localização recebidos e salvos com sucesso.',
             data: {
-                ...newLocation.toJSON(), // Retornar os dados da localização
-                zoneStatus: petStatus // Incluir o status da zona na resposta (opcional)
+                ...location.toJSON(),
+                zoneStatus: isInSafeZone ? 'Dentro da Zona Segura' : 'Fora da Zona Segura'
             }
         });
 
@@ -141,4 +164,6 @@ exports.receiveLocationData = async (req, res) => {
             error: error.message
         });
     }
-}; 
+}
+
+exports.receiveLocationData = receiveLocationData; 

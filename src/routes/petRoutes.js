@@ -24,4 +24,7 @@ router.delete('/:id', petController.deletePet);
 // Obter localização do pet por ID (corrigido para usar petId)
 router.get('/location/:petId', petController.getPetLocation);
 
+// Atualizar device_id do pet
+router.put('/:petId/device', petController.updatePetDeviceId);
+
 module.exports = router; 

@@ -38,6 +38,12 @@ module.exports = (sequelize) => {
             defaultValue: null,
             field: 'image'
         },
+        device_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true,
+            field: 'device_id'
+        },
         createdAt: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW,

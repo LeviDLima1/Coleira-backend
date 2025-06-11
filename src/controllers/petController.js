@@ -291,4 +291,43 @@ exports.getPetLocation = async (req, res) => {
             error: error.message
         });
     }
+};
+
+exports.updatePetDeviceId = async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const { device_id } = req.body;
+
+        if (!device_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Device ID é obrigatório'
+            });
+        }
+
+        const pet = await Pet.findByPk(petId);
+        
+        if (!pet) {
+            return res.status(404).json({
+                success: false,
+                error: 'Pet não encontrado'
+            });
+        }
+
+        // Atualiza o device_id do pet
+        await pet.update({ device_id });
+
+        res.json({
+            success: true,
+            message: 'Device ID atualizado com sucesso',
+            data: pet
+        });
+
+    } catch (error) {
+        console.error('Erro ao atualizar device_id:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 }; 

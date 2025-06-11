@@ -1,3 +1,4 @@
 node_modules
 .env
-
+# Arquivos de teste de banco de dados
+test-db.js
